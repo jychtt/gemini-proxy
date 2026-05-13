@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Key Usage Statistics</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+
+        .header-area {
+            background-color: #e9ecef;
+            padding: 20px 0;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #343a40;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.08);
+        }
+
+        #countdown-area {
+            margin-bottom: 25px;
+            font-size: 1.1em;
+            color: #343a40;
+            text-align: center;
+        }
+
+        #countdown-area p {
+            margin: 0;
+        }
+
+        #countdown {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #007bff;
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin-left: 5px;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+            box-shadow: none;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .usage-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.8em;
+            font-weight: 600;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.25rem;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            color: white;
+            overflow: hidden;
+        }
+
+        .usage-badge span {
+            padding: 0.35em 0.65em;
+        }
+
+        .usage-badge span:last-child {
+            border-left: 1px solid white;
+            margin-left: -1px;
+        }
+
+        /* Badge Colors */
+        .badge-secondary {
+            background-color: #6c757d;
+        }
+
+        .badge-primary {
+            background-color: #007bff;
+        }
+
+        .badge-success {
+            background-color: #28a745;
+        }
+
+        .badge-info {
+            background-color: #17a2b8;
+        }
+
+        .badge-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .badge-danger {
+            background-color: #dc3545;
+        }
+
+        .badge-dark {
+            background-color: #343a40;
+        }
+
+        .badge-light {
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+
+        /* Additional Colors */
+        .badge-purple {
+            background-color: #6f42c1;
+        }
+
+        .badge-pink {
+            background-color: #e83e8c;
+        }
+
+        .badge-teal {
+            background-color: #20c997;
+        }
+
+        .badge-cyan {
+            background-color: #17a2b8;
+        }
+
+        .badge-orange {
+            background-color: #fd7e14;
+        }
+
+        .badge-indigo {
+            background-color: #6610f2;
+        }
+
+        .badge-lime {
+            background-color: #cddc39;
+            color: #212529;
+        }
+
+        .badge-brown {
+            background-color: #795548;
+        }
+
+        .badge-blue-grey {
+            background-color: #607d8b;
+        }
+
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .exhausted-model {
+            background-color: #6c757d !important;
+            /* Override specific badge color with grey */
+            cursor: pointer;
+        }
+
+        #reason-display {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            font-family: monospace;
+            white-space: pre-wrap;
+            /* Preserve formatting */
+            word-break: break-word;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header-area">
+            <h1>API Key Usage Statistics</h1>
+        </div>
+        <div id="countdown-area">
+            <p>Next Reset Countdown: <span id="countdown">Calculating...</span></p>
+        </div>
+
+        <div id="stats-container">
+            <p>Loading statistics...</p>
+        </div>
+        <div id="reason-display"
+            style="display: none; margin-top: 20px; padding: 15px; border: 1px solid #dee2e6; border-radius: 4px; background-color: #f8f9fa;">
+            <!-- Reason will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        const statsContainer = document.getElementById('stats-container');
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const currentPath = window.location.pathname;
+            const modelUsagePath = currentPath.replace('/stat', '/model_usage');
+            const fetchUrl = `${window.location.origin}${modelUsagePath}`;
+
+            fetch(fetchUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!Array.isArray(data)) {
+                        throw new Error('Invalid data format received.');
+                    }
+
+                    if (data.length === 0) {
+                        statsContainer.innerHTML = '<p>No statistics available.</p>';
+                        return;
+                    }
+
+                    // Create a table to display the stats
+                    const table = document.createElement('table');
+                    let tableHTML = '<thead><tr><th>API Key (Partial)</th><th>Model Usage</th></tr></thead><tbody>';
+
+                    data.forEach(item => {
+                        const keyPartial = item.key ? item.key.substring(0, 8) + '...' : 'N/A';
+                        let usageDetailsHTML = 'No usage recorded';
+                        if (item.usageCount && Object.keys(item.usageCount).length > 0) {
+                            // List of available badge color classes
+                            const badgeColorClasses = [
+                                'badge-primary',
+                                'badge-success',
+                                'badge-info',
+                                'badge-warning',
+                                'badge-danger',
+                                'badge-dark',
+                                'badge-purple',
+                                'badge-pink',
+                                'badge-teal',
+                                'badge-orange',
+                                'badge-indigo',
+                                'badge-lime',
+                                'badge-brown',
+                                'badge-blue-grey'
+                            ];
+
+                            // Simple deterministic hash function to get a color index based on model name
+                            const getModelColorClass = (modelName) => {
+                                let hash = 0;
+                                for (let i = 0; i < modelName.length; i++) {
+                                    const char = modelName.charCodeAt(i);
+                                    hash = ((hash << 5) - hash) + char;
+                                    hash = hash & hash; // Convert to 32bit integer
+                                }
+                                const colorIndex = Math.abs(hash) % badgeColorClasses.length;
+                                return badgeColorClasses[colorIndex];
+                            };
+
+                            usageDetailsHTML = Object.entries(item.usageCount)
+                                .map(([model, count]) => {
+                                    const badgeClass = getModelColorClass(model);
+                                    const isExhausted = item.exhaustedModels?.includes(model); // Check if exhausted
+                                    const reason = item.exhaustedReasons?.[model] || '无原因'; // Get reason
+                                    const extraClass = isExhausted ? ' exhausted-model' : ''; // Add class if exhausted
+                                    const dataAttr = isExhausted ? ` data-reason="${encodeBase64(reason)}"` : ''; // Add data attribute if exhausted
+
+                                    // Add extraClass and dataAttr to the outer span
+                                    return `<span class="usage-badge ${badgeClass}${extraClass}"${dataAttr}><span>${model}</span><span>${count}</span></span>`;
+                                })
+                                .join(''); // Join without separator
+                        }
+                        tableHTML += `<tr><td>${keyPartial}</td><td>${usageDetailsHTML}</td></tr>`;
+                    });
+
+                    tableHTML += '</tbody>';
+                    table.innerHTML = tableHTML;
+
+                    statsContainer.innerHTML = ''; // Clear loading message
+                    statsContainer.appendChild(table);
+                })
+                .catch(error => {
+                    console.error('Error fetching stats:', error);
+                    statsContainer.innerHTML = `<p class="error">Failed to load statistics: ${error.message}</p>`;
+                });
+        });
+
+        // Countdown logic
+        const countdownElement = document.getElementById('countdown');
+
+        function updateCountdown() {
+            const nowUtcTimestamp = Date.now(); // Get current UTC milliseconds
+
+            // Create a Date object from the timestamp to get date components
+            const now = new Date(nowUtcTimestamp);
+
+            // Calculate today's reset time (UTC 07:00) in milliseconds
+            const todayResetUtcTimestamp = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7, 0, 0);
+
+            let nextResetTimeTimestamp = todayResetUtcTimestamp;
+
+            // If current UTC time is past today's reset time, set reset time for tomorrow
+            if (nowUtcTimestamp >= todayResetUtcTimestamp) {
+                nextResetTimeTimestamp = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 7, 0, 0);
+            }
+
+            const timeDiff = nextResetTimeTimestamp - nowUtcTimestamp; // Difference in milliseconds
+
+            if (timeDiff < 0) {
+                countdownElement.textContent = "Reset";
+                return;
+            }
+
+            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+            countdownElement.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+        }
+
+        // Initial call and update every second
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+
+        const reasonDisplay = document.getElementById('reason-display');
+        statsContainer.addEventListener('click', (event) => {
+            const badge = event.target.closest('.exhausted-model');
+            if (badge && reasonDisplay) {
+                const encodedReason = badge.getAttribute('data-reason');
+                const reason = decodeBase64(encodedReason);
+                reasonDisplay.textContent = reason;
+                reasonDisplay.style.display = 'block';
+            } else if (reasonDisplay && !event.target.closest('#reason-display')) {
+                reasonDisplay.style.display = 'none';
+            }
+        });
+
+        // Helper function to encode string to Base64
+        function encodeBase64(str) {
+            return btoa(unescape(encodeURIComponent(str)));
+        }
+
+        // Helper function to decode Base64 string
+        function decodeBase64(str) {
+            return decodeURIComponent(escape(atob(str)));
+        }
+
+        // Helper function to escape HTML (important for displaying reason)
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, "&")
+                .replace(/</g, "<")
+                .replace(/>/g, ">")
+                .replace(/"/g, "\"")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+
+</html>

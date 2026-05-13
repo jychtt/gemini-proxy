@@ -1,0 +1,7 @@
+[Improvments]
+1. Resolve 429 limit Demension.
+2. Add management functions and page.
+3. Move keys from env param to manager storage.
+
+[Bugs]
+1. Logs out of ApiManager, are not stably print in wrangler tail.
